@@ -1,4 +1,5 @@
-﻿using NiteOut.Data.Imdb.Business.Infrastructure;
+﻿using NiteOut.Data.Imdb.Business.Entities;
+using NiteOut.Data.Imdb.Business.Infrastructure;
 using Npgsql;
 using System;
 using System.Collections.Generic;
@@ -65,6 +66,10 @@ namespace NiteOut.Data.Imdb.Business.Postgre
         #endregion
 
         #region Create
+        public void InsertMovie(Movie movie)
+        {
+
+        }
         #endregion
 
         #region Sanitize

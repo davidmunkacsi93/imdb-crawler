@@ -8,9 +8,12 @@ namespace NiteOut.Data.Imdb.Test
     public class OmdbTest
     {
         [TestMethod]
-        public void TestQueryMovie()
-        {
-            OmdbManager.Instance.QueryMovieByTitle("star", "2017");
-        }
+        public void TestGetMovieByTitle() => Assert.IsNotNull(OmdbManager.Instance.GetMovieByTitle("star", "2017"));
+
+        [TestMethod]
+        public void TestGetMovieById() => Assert.IsNotNull(OmdbManager.Instance.GetMovieById("tt0076759"));
+
+        [TestMethod]
+        public void TestSearchMovie() => Assert.IsNotNull(OmdbManager.Instance.SearchMovie("star"));
     }
 }
