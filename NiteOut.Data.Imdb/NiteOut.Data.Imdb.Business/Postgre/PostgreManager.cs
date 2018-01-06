@@ -67,11 +67,20 @@ namespace NiteOut.Data.Imdb.Business.Postgre
         #endregion
 
         #region Create
+        public void InsertMovies(List<Movie> movies)
+        {
+            foreach (var movie in movies)
+            {
+                InsertMovie(movie);
+            }
+        }
+
         public void InsertMovie(Movie movie)
         {
+            // TODO: Better way to solve this? Serial IDs?
             var insertCommand = new NpgsqlCommand("INSERT INTO \"MOVIE\"" +
                 "(\"MOVIE_ID\", \"TITLE\", \"COUNTRY\", \"PRIMARY_RELEASE_DATE\", \"STORY_LINE\", \"GENRES\", \"WEBSITE\", \"REVIEWS\", \"BUDGET\")" +
-                " VALUES((SELECT COALESCE(MAX(\"MOVIE_ID\"), 0) + 1 FROM \"MOVIE\"), @title, @country, @releaseDate, @storyLine, @genres, @website, @reviews, @budget) RETURNING  \"MOVIE_ID\"", Connection);
+                $" VALUES({GetNextIdScript("MOVIE", "MOVIE_ID")}, @title, @country, @releaseDate, @storyLine, @genres, @website, @reviews, @budget) RETURNING  \"MOVIE_ID\"", Connection);
 
             insertCommand.Parameters.AddWithValue("title", movie.Title);
             insertCommand.Parameters.AddWithValue("country", movie.Country);
@@ -84,7 +93,26 @@ namespace NiteOut.Data.Imdb.Business.Postgre
             insertCommand.Parameters.Add("budget", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
 
 
-            var id = insertCommand.ExecuteScalar();
+            var id = (int)insertCommand.ExecuteScalar();
+            insertCommand.Dispose();
+            foreach (var rating in movie.Ratings)
+            {
+                InsertRating(id, rating);
+            }
+        }
+
+        public void InsertRating(int movieId, Rating rating)
+        {
+            // TODO: Better way to solve this? Serial IDs?
+            var insertCommand = new NpgsqlCommand("INSERT INTO \"RANKING\"(\"RANKING_ID\", \"MOVIE_ID\", \"SOURCE\", \"RATING\")" +
+                $" VALUES({GetNextIdScript("RANKING", "RANKING_ID")}, @movieId, @source, @rating);", Connection);
+
+            insertCommand.Parameters.AddWithValue("movieId", movieId);
+            insertCommand.Parameters.AddWithValue("source", rating.Source);
+            insertCommand.Parameters.AddWithValue("rating", rating.Value);
+
+            int changed = insertCommand.ExecuteNonQuery();
+            insertCommand.Dispose();
         }
         #endregion
 
@@ -105,6 +133,11 @@ namespace NiteOut.Data.Imdb.Business.Postgre
             reader.Close();
             return tableNames.Contains(tableName);
         }
+        #endregion
+
+        #region Helpers
+        public string GetNextIdScript(string tableName, string pkName)
+         => $"(SELECT COALESCE(MAX(\"{pkName}\"), 0) + 1 FROM \"{tableName}\")";
         #endregion
 
         #region Implementation of IDisposable
