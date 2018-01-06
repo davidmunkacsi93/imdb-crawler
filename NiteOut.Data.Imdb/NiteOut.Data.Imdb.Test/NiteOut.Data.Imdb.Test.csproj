@@ -54,6 +54,7 @@
     <Compile Include="PostgreTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="OmdbTest.cs" />
+    <Compile Include="ImdbCrawlerTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

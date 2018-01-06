@@ -82,23 +82,30 @@ namespace NiteOut.Data.Imdb.Business.Postgre
                 "(\"MOVIE_ID\", \"TITLE\", \"COUNTRY\", \"PRIMARY_RELEASE_DATE\", \"STORY_LINE\", \"GENRES\", \"WEBSITE\", \"REVIEWS\", \"BUDGET\")" +
                 $" VALUES({GetNextIdScript("MOVIE", "MOVIE_ID")}, @title, @country, @releaseDate, @storyLine, @genres, @website, @reviews, @budget) RETURNING  \"MOVIE_ID\"", Connection);
 
-            insertCommand.Parameters.AddWithValue("title", movie.Title);
-            insertCommand.Parameters.AddWithValue("country", movie.Country);
-            insertCommand.Parameters.AddWithValue("releaseDate", DateTime.ParseExact(movie.Released, "dd MMM yyyy",
-                System.Globalization.CultureInfo.InvariantCulture));
-            insertCommand.Parameters.AddWithValue("storyLine", movie.Plot);
-            insertCommand.Parameters.Add("genres", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = movie.Genre.Split(',');
-            insertCommand.Parameters.AddWithValue("website", movie.Website);
-            insertCommand.Parameters.Add("reviews", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
-            insertCommand.Parameters.Add("budget", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
-
-
-            var id = (int)insertCommand.ExecuteScalar();
-            insertCommand.Dispose();
-            foreach (var rating in movie.Ratings)
+            try
             {
-                InsertRating(id, rating);
+                DateTime released;
+                insertCommand.Parameters.AddWithValue("title", movie.Title);
+                insertCommand.Parameters.AddWithValue("country", movie.Country);
+                insertCommand.Parameters.AddWithValue("releaseDate", DateTime.TryParseExact(movie.Released, "dd MMM yyyy",
+                    System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out released) ? released : DateTime.MinValue);
+                insertCommand.Parameters.AddWithValue("storyLine", movie.Plot);
+                insertCommand.Parameters.Add("genres", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = movie.Genre.Split(',');
+                insertCommand.Parameters.AddWithValue("website", movie.Website);
+                insertCommand.Parameters.Add("reviews", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
+                insertCommand.Parameters.Add("budget", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
+                var id = (int)insertCommand.ExecuteScalar();
+                insertCommand.Dispose();
+                foreach (var rating in movie.Ratings)
+                {
+                    InsertRating(id, rating);
+                }
             }
+            catch (Exception exc)
+            {
+                LogManager.Instance.Error($"Movie {movie.imdbID} could not be inserted.", exc);
+            }
+
         }
 
         public void InsertRating(int movieId, Rating rating)
@@ -107,11 +114,19 @@ namespace NiteOut.Data.Imdb.Business.Postgre
             var insertCommand = new NpgsqlCommand("INSERT INTO \"RANKING\"(\"RANKING_ID\", \"MOVIE_ID\", \"SOURCE\", \"RATING\")" +
                 $" VALUES({GetNextIdScript("RANKING", "RANKING_ID")}, @movieId, @source, @rating);", Connection);
 
-            insertCommand.Parameters.AddWithValue("movieId", movieId);
-            insertCommand.Parameters.AddWithValue("source", rating.Source);
-            insertCommand.Parameters.AddWithValue("rating", rating.Value);
 
-            int changed = insertCommand.ExecuteNonQuery();
+            try
+            {
+                insertCommand.Parameters.AddWithValue("movieId", movieId);
+                insertCommand.Parameters.AddWithValue("source", rating.Source);
+                insertCommand.Parameters.AddWithValue("rating", rating.Value);
+                int changed = insertCommand.ExecuteNonQuery();
+                LogManager.Instance.Info("");
+            }
+            catch (Exception exc)
+            {
+                LogManager.Instance.Error("Ranking could not be inserted.", exc);
+            }
             insertCommand.Dispose();
         }
         #endregion
