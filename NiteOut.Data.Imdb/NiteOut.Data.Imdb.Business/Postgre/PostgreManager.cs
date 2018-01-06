@@ -1,6 +1,7 @@
 ﻿using NiteOut.Data.Imdb.Business.Entities;
 using NiteOut.Data.Imdb.Business.Infrastructure;
 using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -68,7 +69,22 @@ namespace NiteOut.Data.Imdb.Business.Postgre
         #region Create
         public void InsertMovie(Movie movie)
         {
+            var insertCommand = new NpgsqlCommand("INSERT INTO \"MOVIE\"" +
+                "(\"MOVIE_ID\", \"TITLE\", \"COUNTRY\", \"PRIMARY_RELEASE_DATE\", \"STORY_LINE\", \"GENRES\", \"WEBSITE\", \"REVIEWS\", \"BUDGET\")" +
+                " VALUES((SELECT COALESCE(MAX(\"MOVIE_ID\"), 0) + 1 FROM \"MOVIE\"), @title, @country, @releaseDate, @storyLine, @genres, @website, @reviews, @budget) RETURNING  \"MOVIE_ID\"", Connection);
 
+            insertCommand.Parameters.AddWithValue("title", movie.Title);
+            insertCommand.Parameters.AddWithValue("country", movie.Country);
+            insertCommand.Parameters.AddWithValue("releaseDate", DateTime.ParseExact(movie.Released, "dd MMM yyyy",
+                System.Globalization.CultureInfo.InvariantCulture));
+            insertCommand.Parameters.AddWithValue("storyLine", movie.Plot);
+            insertCommand.Parameters.Add("genres", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = movie.Genre.Split(',');
+            insertCommand.Parameters.AddWithValue("website", movie.Website);
+            insertCommand.Parameters.Add("reviews", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
+            insertCommand.Parameters.Add("budget", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
+
+
+            var id = insertCommand.ExecuteScalar();
         }
         #endregion
 
@@ -81,7 +97,7 @@ namespace NiteOut.Data.Imdb.Business.Postgre
             var reader = command.ExecuteReader();
 
             var tableNames = new List<string>();
-            while(reader.Read())
+            while (reader.Read())
             {
                 // We can assume that the result set contains only strings. 
                 tableNames.Add(reader[0] as string);

@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NiteOut.Data.Imdb.Business.Omdb;
+using NiteOut.Data.Imdb.Business.Postgre;
 
 namespace NiteOut.Data.Imdb.Test
 {
@@ -15,5 +16,12 @@ namespace NiteOut.Data.Imdb.Test
 
         [TestMethod]
         public void TestSearchMovie() => Assert.IsNotNull(OmdbManager.Instance.SearchMovie("star"));
+
+        [TestMethod]
+        public void TestInsertMove()
+        {
+            var movie = OmdbManager.Instance.GetMovieById("tt0076759");
+            PostgreManager.Instance.InsertMovie(movie);
+        }
     }
 }
