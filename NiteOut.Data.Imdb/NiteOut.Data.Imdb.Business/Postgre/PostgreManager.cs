@@ -15,7 +15,7 @@ namespace NiteOut.Data.Imdb.Business.Postgre
         #region Fields
         private const string userId = "postgres";
         private const string password = "Pa$$word123";
-        private const string database = "IMDB";
+        private const string database = "NiteOut";
         private const string server = "127.0.0.1";
         private string connectionString = $"Server={server};User Id = {userId}; " +
              $"Password={password};Database={database};";
@@ -69,6 +69,7 @@ namespace NiteOut.Data.Imdb.Business.Postgre
         #region Create
         public void InsertMovies(List<Movie> movies)
         {
+            var dbMovies = QueryTable("MOVIE");
             foreach (var movie in movies)
             {
                 InsertMovie(movie);
@@ -79,8 +80,8 @@ namespace NiteOut.Data.Imdb.Business.Postgre
         {
             // TODO: Better way to solve this? Serial IDs?
             var insertCommand = new NpgsqlCommand("INSERT INTO \"MOVIE\"" +
-                "(\"MOVIE_ID\", \"TITLE\", \"COUNTRY\", \"PRIMARY_RELEASE_DATE\", \"STORY_LINE\", \"GENRES\", \"WEBSITE\", \"REVIEWS\", \"BUDGET\")" +
-                $" VALUES({GetNextIdScript("MOVIE", "MOVIE_ID")}, @title, @country, @releaseDate, @storyLine, @genres, @website, @reviews, @budget) RETURNING  \"MOVIE_ID\"", Connection);
+                "(\"MOVIE_ID\", \"TITLE\", \"COUNTRY\", \"PRIMARY_RELEASE_DATE\", \"STORY_LINE\", \"GENRES\", \"WEBSITE\", \"REVIEWS\", \"BUDGET\", \"ACTORS\", \"DIRECTORS\", \"WRITERS\", \"POSTER\", \"DATA_SOURCE_ID\", \"DATA_SOURCE\")" +
+                $" VALUES({GetNextIdScript("MOVIE", "MOVIE_ID")}, @title, @country, @releaseDate, @storyLine, @genres, @website, @reviews, @budget, @actors, @directors, @writers, @poster, @dataSourceId, @dataSource) RETURNING  \"MOVIE_ID\"", Connection);
 
             try
             {
@@ -94,6 +95,14 @@ namespace NiteOut.Data.Imdb.Business.Postgre
                 insertCommand.Parameters.AddWithValue("website", movie.Website);
                 insertCommand.Parameters.Add("reviews", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
                 insertCommand.Parameters.Add("budget", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = new string[] { };
+                insertCommand.Parameters.Add("actors", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = movie.Actors.Split(',');
+                insertCommand.Parameters.Add("directors", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = movie.Director.Split(',');
+                insertCommand.Parameters.Add("writers", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = movie.Writer.Split(',');
+                insertCommand.Parameters.AddWithValue("poster", movie.Poster);
+                insertCommand.Parameters.AddWithValue("dataSourceId", movie.imdbID);
+                insertCommand.Parameters.AddWithValue("dataSource", "IMDB");
+
+
                 var id = (int)insertCommand.ExecuteScalar();
                 insertCommand.Dispose();
                 foreach (var rating in movie.Ratings)

@@ -37,7 +37,7 @@ namespace NiteOut.Data.Imdb.Business.Omdb
             {
                 result.Add(GetMovieById(movie.imdbID));
             }
-            return result;
+            return result.Where(r => r != null && r.Response == "True").ToList();
         }
 
         public Movie GetMovieById(string id)
@@ -53,6 +53,10 @@ namespace NiteOut.Data.Imdb.Business.Omdb
             url += $"&i={id}";
 
             var response = GetRequest(url);
+            if (string.IsNullOrEmpty(response))
+            {
+                return null;
+            }
             var mov = JsonConvert.DeserializeObject<Movie>(response);
             return mov;
         }
@@ -77,6 +81,10 @@ namespace NiteOut.Data.Imdb.Business.Omdb
             }
 
             var response = GetRequest(url);
+            if (string.IsNullOrEmpty(response))
+            {
+                return null;
+            }
             var mov = JsonConvert.DeserializeObject<Movie>(response);
             return mov;
         }
@@ -87,13 +95,22 @@ namespace NiteOut.Data.Imdb.Business.Omdb
         {
             using (HttpClient client = new HttpClient())
             {
-                var response = client.GetAsync(url).Result;
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    LogManager.Instance.Info($"[OMDb] Calling URL {rootUrl} was succesful.");
+                    var response = client.GetAsync(url).Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LogManager.Instance.Info($"[OMDb] Calling URL {url} was succesful.");
+                    }
+                    LogManager.Instance.Info($"[OMDb] Calling URL {url} was not succesful.");
+                    return response.Content.ReadAsStringAsync().Result;
                 }
-                LogManager.Instance.Info($"[OMDb] Calling URL {rootUrl} was not succesful.");
-                return response.Content.ReadAsStringAsync().Result;
+                catch (Exception exc)
+                {
+                    LogManager.Instance.Error($"[OMDb] Calling URL {url} was not succesful.", exc);
+                    return GetRequest(url);
+                }
+
             }
         }
         #endregion
